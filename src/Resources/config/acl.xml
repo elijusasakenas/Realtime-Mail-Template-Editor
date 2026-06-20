@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<privileges xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/shopware/trunk/src/Core/Framework/Resources/config/acl.xsd">
+
+    <acl>
+        <role name="realtime_mail_template_editor.viewer">
+            <privilege>mail_template:read</privilege>
+            <privilege>mail_template_type:read</privilege>
+        </role>
+
+        <role name="realtime_mail_template_editor.editor">
+            <parent>realtime_mail_template_editor.viewer</parent>
+            <privilege>mail_template:update</privilege>
+        </role>
+    </acl>
+</privileges>

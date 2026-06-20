@@ -1,0 +1,46 @@
+{
+    "realtime-mail-template-editor": {
+        "general": {
+            "title": "Echtzeit E-Mail-Editor",
+            "description": "E-Mail-Templates mit sofortiger Live-Vorschau bearbeiten"
+        },
+        "navigation": {
+            "main": "Echtzeit E-Mail-Editor"
+        },
+        "editor": {
+            "template": "E-Mail-Template",
+            "templatePlaceholder": "E-Mail-Templates suchen...",
+            "subject": "Betreff",
+            "senderName": "Absendername",
+            "contentHtml": "HTML-Inhalt",
+            "unknownType": "Unbekannter Typ"
+        },
+        "variables": {
+            "title": "Variablen",
+            "subtitle": "Dynamische Werte suchen und einfuegen",
+            "searchPlaceholder": "Variablen suchen...",
+            "empty": "Keine Variablen gefunden.",
+            "groupAll": "Alle",
+            "groupCustomer": "Kunde",
+            "groupOrder": "Bestellung",
+            "groupShop": "Shop",
+            "groupLinks": "Links",
+            "groupAdvanced": "Erweitert",
+            "groupSalesChannel": "Verkaufskanal",
+            "groupProduct": "Produkt",
+            "groupNewsletter": "Newsletter",
+            "customField": "Benutzerdefiniertes Feld"
+        },
+        "preview": {
+            "empty": "Waehle ein Template aus, um mit der Bearbeitung zu beginnen.",
+            "clickToEditHint": "Klicke Text in der Vorschau an, um passenden Template-Text zu bearbeiten.",
+            "quickEditTitle": "Ausgewaehlten Vorschau-Text bearbeiten",
+            "quickEditLabel": "Ersatztext",
+            "applyTextEdit": "In HTML uebernehmen",
+            "editNotFound": "Der ausgewaehlte Text wurde aus Variablen oder Markup gerendert und nicht als Klartext im HTML-Template gefunden."
+        },
+        "notification": {
+            "saveSuccess": "E-Mail-Template gespeichert."
+        }
+    }
+}

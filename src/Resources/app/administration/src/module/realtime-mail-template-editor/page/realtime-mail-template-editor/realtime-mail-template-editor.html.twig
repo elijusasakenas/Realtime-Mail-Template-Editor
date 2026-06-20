@@ -1,0 +1,194 @@
+{% block realtime_mail_template_editor %}
+    <sw-page class="realtime-mail-template-editor">
+        {% block realtime_mail_template_editor_smart_bar_header %}
+            <template #smart-bar-header>
+                <h2 class="realtime-mail-template-editor__title">
+                    {{ $tc('realtime-mail-template-editor.general.title') }}
+                </h2>
+            </template>
+        {% endblock %}
+
+        {% block realtime_mail_template_editor_smart_bar_actions %}
+            <template #smart-bar-actions>
+                <sw-button-process
+                    variant="primary"
+                    :disabled="!selectedTemplate || !canEdit"
+                    :isLoading="isLoading"
+                    :processSuccess="isSaveSuccessful"
+                    @process-finish="isSaveSuccessful = false"
+                    @click="onSave"
+                >
+                    {{ $tc('global.default.save') }}
+                </sw-button-process>
+            </template>
+        {% endblock %}
+
+        {% block realtime_mail_template_editor_content %}
+            <template #content>
+                <div class="realtime-mail-template-editor__layout">
+                    <section class="realtime-mail-template-editor__editor">
+                        <sw-container
+                            class="realtime-mail-template-editor__form"
+                            columns="1fr"
+                            gap="24px"
+                        >
+                            <div class="realtime-mail-template-editor__selector-row">
+                                <sw-entity-single-select
+                                    v-model:value="selectedTemplateId"
+                                    :label="$tc('realtime-mail-template-editor.editor.template')"
+                                    entity="mail_template"
+                                    :criteria="mailTemplateCriteria"
+                                    :label-callback="getMailTemplateLabel"
+                                    :placeholder="$tc('realtime-mail-template-editor.editor.templatePlaceholder')"
+                                    :disabled="isLoading"
+                                />
+
+                                <sw-language-switch @on-change="onChangeLanguage" />
+                            </div>
+
+                            <sw-text-field
+                                v-if="selectedTemplate"
+                                v-model="selectedTemplate.subject"
+                                :label="$tc('realtime-mail-template-editor.editor.subject')"
+                                :disabled="!canEdit"
+                            />
+
+                            <sw-text-field
+                                v-if="selectedTemplate"
+                                v-model="selectedTemplate.senderName"
+                                :label="$tc('realtime-mail-template-editor.editor.senderName')"
+                                :disabled="!canEdit"
+                            />
+
+                            <div
+                                v-if="selectedTemplate"
+                                class="realtime-mail-template-editor__workspace"
+                            >
+                                <sw-code-editor
+                                    ref="htmlEditor"
+                                    v-model:value="selectedTemplate.contentHtml"
+                                    class="realtime-mail-template-editor__html-editor"
+                                    :label="$tc('realtime-mail-template-editor.editor.contentHtml')"
+                                    completion-mode="entity"
+                                    mode="twig"
+                                    :completer-function="completerFunction"
+                                    :editor-config="editorConfig"
+                                    :disabled="!canEdit"
+                                />
+
+                                <aside class="realtime-mail-template-editor__variables">
+                                    <div class="realtime-mail-template-editor__variables-header">
+                                        <strong>{{ $tc('realtime-mail-template-editor.variables.title') }}</strong>
+                                        <span>{{ $tc('realtime-mail-template-editor.variables.subtitle') }}</span>
+                                    </div>
+
+                                    <sw-text-field
+                                        v-model="variableSearchTerm"
+                                        :placeholder="$tc('realtime-mail-template-editor.variables.searchPlaceholder')"
+                                    />
+
+                                    <div class="realtime-mail-template-editor__variable-groups">
+                                        <button
+                                            v-for="group in variableGroups"
+                                            :key="group.value"
+                                            class="realtime-mail-template-editor__variable-group"
+                                            :class="{ 'is--active': activeVariableGroup === group.value }"
+                                            type="button"
+                                            @click="activeVariableGroup = group.value"
+                                        >
+                                            {{ group.label }}
+                                        </button>
+                                    </div>
+
+                                    <div class="realtime-mail-template-editor__variable-list">
+                                        <button
+                                            v-for="variable in filteredVariables"
+                                            :key="variable.value"
+                                            class="realtime-mail-template-editor__variable"
+                                            type="button"
+                                            :disabled="!canEdit"
+                                            @click="insertVariable(variable)"
+                                        >
+                                            <span>{{ variable.label }}</span>
+                                            <code v-text="'{{ ' + variable.value + ' }}'"></code>
+                                            <small v-if="variable.example">{{ variable.example }}</small>
+                                        </button>
+
+                                        <p
+                                            v-if="filteredVariables.length <= 0"
+                                            class="realtime-mail-template-editor__variable-empty"
+                                        >
+                                            {{ $tc('realtime-mail-template-editor.variables.empty') }}
+                                        </p>
+                                    </div>
+                                </aside>
+                            </div>
+                        </sw-container>
+                    </section>
+
+                    <aside class="realtime-mail-template-editor__preview">
+                        <div class="realtime-mail-template-editor__preview-toolbar">
+                            <div class="realtime-mail-template-editor__preview-heading">
+                                <strong>{{ preview.subject }}</strong>
+                                <span>{{ preview.senderName }}</span>
+                            </div>
+
+                            <sw-loader
+                                v-if="isRendering"
+                                size="24px"
+                            />
+                        </div>
+
+                        <sw-alert
+                            v-if="renderError"
+                            variant="error"
+                            :showIcon="true"
+                        >
+                            {{ renderError }}
+                        </sw-alert>
+
+                        <div class="realtime-mail-template-editor__preview-edit">
+                            <template v-if="hasPreviewEditSelection">
+                                <div class="realtime-mail-template-editor__preview-edit-header">
+                                    <strong>{{ $tc('realtime-mail-template-editor.preview.quickEditTitle') }}</strong>
+                                    <button
+                                        type="button"
+                                        @click="clearPreviewEdit"
+                                    >
+                                        {{ $tc('global.default.cancel') }}
+                                    </button>
+                                </div>
+
+                                <sw-textarea-field
+                                    v-model="previewEdit.replacementText"
+                                    :label="$tc('realtime-mail-template-editor.preview.quickEditLabel')"
+                                />
+
+                                <sw-button
+                                    size="small"
+                                    variant="primary"
+                                    :disabled="!canEdit"
+                                    @click="applyPreviewTextEdit"
+                                >
+                                    {{ $tc('realtime-mail-template-editor.preview.applyTextEdit') }}
+                                </sw-button>
+                            </template>
+
+                            <span v-else>
+                                {{ $tc('realtime-mail-template-editor.preview.clickToEditHint') }}
+                            </span>
+                        </div>
+
+                        <iframe
+                            class="realtime-mail-template-editor__iframe"
+                            :srcdoc="previewDocument"
+                            sandbox="allow-same-origin"
+                            title="Mail template preview"
+                            @load="bindPreviewInteractions"
+                        />
+                    </aside>
+                </div>
+            </template>
+        {% endblock %}
+    </sw-page>
+{% endblock %}

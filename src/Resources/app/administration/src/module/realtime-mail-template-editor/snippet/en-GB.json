@@ -1,0 +1,46 @@
+{
+    "realtime-mail-template-editor": {
+        "general": {
+            "title": "Realtime email editor",
+            "description": "Edit mail templates with an immediate live preview"
+        },
+        "navigation": {
+            "main": "Realtime email editor"
+        },
+        "editor": {
+            "template": "Email template",
+            "templatePlaceholder": "Search email templates...",
+            "subject": "Subject",
+            "senderName": "Sender name",
+            "contentHtml": "HTML content",
+            "unknownType": "Unknown type"
+        },
+        "variables": {
+            "title": "Variables",
+            "subtitle": "Search and insert dynamic values",
+            "searchPlaceholder": "Search variables...",
+            "empty": "No variables found.",
+            "groupAll": "All",
+            "groupCustomer": "Customer",
+            "groupOrder": "Order",
+            "groupShop": "Shop",
+            "groupLinks": "Links",
+            "groupAdvanced": "Advanced",
+            "groupSalesChannel": "Sales channel",
+            "groupProduct": "Product",
+            "groupNewsletter": "Newsletter",
+            "customField": "Custom field"
+        },
+        "preview": {
+            "empty": "Choose a template to start editing.",
+            "clickToEditHint": "Click text in the preview to edit matching template text.",
+            "quickEditTitle": "Edit selected preview text",
+            "quickEditLabel": "Replacement text",
+            "applyTextEdit": "Apply to HTML",
+            "editNotFound": "The selected text was rendered from variables or markup and was not found as plain text in the HTML template."
+        },
+        "notification": {
+            "saveSuccess": "Email template saved."
+        }
+    }
+}

@@ -1,0 +1,37 @@
+{
+    "name": "realtime-mail-template-editor/shopware-plugin",
+    "description": "A Shopware 6 administration plugin for editing mail templates with a live preview.",
+    "type": "shopware-platform-plugin",
+    "license": "MIT",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "Realtime Mail Template Editor contributors"
+        }
+    ],
+    "require": {
+        "shopware/core": "~6.6.0 || ~6.7.0",
+        "shopware/administration": "~6.6.0 || ~6.7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "RealtimeMailTemplateEditor\\": "src/"
+        }
+    },
+    "extra": {
+        "shopware-plugin-class": "RealtimeMailTemplateEditor\\RealtimeMailTemplateEditor",
+        "label": {
+            "en-GB": "Realtime Mail Template Editor",
+            "de-DE": "Echtzeit E-Mail-Template Editor"
+        },
+        "description": {
+            "en-GB": "Edit Shopware mail templates with an immediate live preview for shop owners and managers.",
+            "de-DE": "Shopware E-Mail-Templates mit sofortiger Live-Vorschau bearbeiten."
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "composer/installers": true
+        }
+    }
+}

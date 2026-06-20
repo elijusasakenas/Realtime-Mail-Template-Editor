@@ -1,0 +1,12 @@
+services:
+  shopware:
+    image: dockware/dev:latest
+    container_name: realtime-mail-template-editor-shop
+    ports:
+      - "80:80"
+      - "3306:3306"
+      - "22:22"
+    volumes:
+      - ./:/var/www/html/custom/plugins/RealtimeMailTemplateEditor
+    environment:
+      XDEBUG_ENABLED: "0"
