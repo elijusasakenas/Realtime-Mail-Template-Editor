@@ -42,8 +42,6 @@
                                     :placeholder="$tc('realtime-mail-template-editor.editor.templatePlaceholder')"
                                     :disabled="isLoading"
                                 />
-
-                                <sw-language-switch @on-change="onChangeLanguage" />
                             </div>
 
                             <sw-text-field
@@ -139,6 +137,72 @@
                             />
                         </div>
 
+                        <div class="realtime-mail-template-editor__preview-controls">
+                            <div class="realtime-mail-template-editor__preview-tabs">
+                                <button
+                                    type="button"
+                                    class="realtime-mail-template-editor__preview-tab"
+                                    :class="{ 'is--active': previewTab === 'html' }"
+                                    @click="previewTab = 'html'"
+                                >
+                                    {{ $tc('realtime-mail-template-editor.preview.tabHtml') }}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="realtime-mail-template-editor__preview-tab"
+                                    :class="{ 'is--active': previewTab === 'plain' }"
+                                    @click="previewTab = 'plain'"
+                                >
+                                    {{ $tc('realtime-mail-template-editor.preview.tabPlain') }}
+                                </button>
+                            </div>
+
+                            <div
+                                v-if="previewTab === 'html'"
+                                class="realtime-mail-template-editor__device-toggle"
+                            >
+                                <button
+                                    type="button"
+                                    class="realtime-mail-template-editor__device-button"
+                                    :class="{ 'is--active': previewDevice === 'desktop' }"
+                                    :title="$tc('realtime-mail-template-editor.preview.deviceDesktop')"
+                                    @click="previewDevice = 'desktop'"
+                                >
+                                    <sw-icon
+                                        name="regular-desktop"
+                                        size="16px"
+                                    />
+                                    {{ $tc('realtime-mail-template-editor.preview.deviceDesktop') }}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="realtime-mail-template-editor__device-button"
+                                    :class="{ 'is--active': previewDevice === 'tablet' }"
+                                    :title="$tc('realtime-mail-template-editor.preview.deviceTablet')"
+                                    @click="previewDevice = 'tablet'"
+                                >
+                                    <sw-icon
+                                        name="regular-tablet"
+                                        size="16px"
+                                    />
+                                    {{ $tc('realtime-mail-template-editor.preview.deviceTablet') }}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="realtime-mail-template-editor__device-button"
+                                    :class="{ 'is--active': previewDevice === 'mobile' }"
+                                    :title="$tc('realtime-mail-template-editor.preview.deviceMobile')"
+                                    @click="previewDevice = 'mobile'"
+                                >
+                                    <sw-icon
+                                        name="regular-mobile"
+                                        size="16px"
+                                    />
+                                    {{ $tc('realtime-mail-template-editor.preview.deviceMobile') }}
+                                </button>
+                            </div>
+                        </div>
+
                         <sw-alert
                             v-if="renderError"
                             variant="error"
@@ -147,13 +211,16 @@
                             {{ renderError }}
                         </sw-alert>
 
-                        <div class="realtime-mail-template-editor__preview-edit">
+                        <div
+                            v-if="previewTab === 'html'"
+                            class="realtime-mail-template-editor__preview-edit"
+                        >
                             <template v-if="hasPreviewEditSelection">
                                 <div class="realtime-mail-template-editor__preview-edit-header">
                                     <strong>{{ $tc('realtime-mail-template-editor.preview.quickEditTitle') }}</strong>
                                     <button
                                         type="button"
-                                        @click="clearPreviewEdit"
+                                        @click="cancelPreviewEdit"
                                     >
                                         {{ $tc('global.default.cancel') }}
                                     </button>
@@ -164,10 +231,25 @@
                                     :label="$tc('realtime-mail-template-editor.preview.quickEditLabel')"
                                 />
 
+                                <div
+                                    v-if="hasSourceMatch"
+                                    class="realtime-mail-template-editor__preview-edit-source"
+                                >
+                                    <span>{{ $tc('realtime-mail-template-editor.preview.matchedSourceLabel') }}</span>
+                                    <code>{{ previewEdit.matchedSource }}</code>
+                                </div>
+
+                                <p
+                                    v-else
+                                    class="realtime-mail-template-editor__preview-edit-warning"
+                                >
+                                    {{ $tc('realtime-mail-template-editor.preview.noSourceMatch') }}
+                                </p>
+
                                 <sw-button
                                     size="small"
                                     variant="primary"
-                                    :disabled="!canEdit"
+                                    :disabled="!canEdit || !hasSourceMatch"
                                     @click="applyPreviewTextEdit"
                                 >
                                     {{ $tc('realtime-mail-template-editor.preview.applyTextEdit') }}
@@ -179,13 +261,38 @@
                             </span>
                         </div>
 
-                        <iframe
-                            class="realtime-mail-template-editor__iframe"
-                            :srcdoc="previewDocument"
-                            sandbox="allow-same-origin"
-                            title="Mail template preview"
-                            @load="bindPreviewInteractions"
-                        />
+                        <div
+                            v-if="previewTab === 'html'"
+                            class="realtime-mail-template-editor__frame-viewport"
+                        >
+                            <div
+                                class="realtime-mail-template-editor__frame-shell"
+                                :class="'is--device-' + previewDevice"
+                                :style="{ width: previewFrameWidth }"
+                            >
+                                <iframe
+                                    class="realtime-mail-template-editor__iframe"
+                                    :class="{ 'is--rendering': isRendering }"
+                                    :srcdoc="previewDocument"
+                                    sandbox="allow-same-origin"
+                                    title="Mail template preview"
+                                    @load="bindPreviewInteractions"
+                                />
+                            </div>
+                        </div>
+
+                        <div
+                            v-else
+                            class="realtime-mail-template-editor__plain-preview"
+                        >
+                            <pre v-if="previewPlainText">{{ previewPlainText }}</pre>
+                            <p
+                                v-else
+                                class="realtime-mail-template-editor__empty-preview"
+                            >
+                                {{ $tc('realtime-mail-template-editor.preview.emptyPlain') }}
+                            </p>
+                        </div>
                     </aside>
                 </div>
             </template>

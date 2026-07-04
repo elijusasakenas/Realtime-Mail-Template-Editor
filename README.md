@@ -26,6 +26,21 @@ bin/build-administration.sh
 
 The module appears under **Settings > Plugins > Realtime email editor**.
 
+## Local Shop Option
+
+If there is no Shopware installation yet, this repo includes a Dockware setup that mounts the plugin into a new local shop:
+
+```bash
+docker compose up -d
+docker compose exec shopware bash
+bin/console plugin:refresh
+bin/console plugin:install --activate RealtimeMailTemplateEditor
+bin/console cache:clear
+bin/build-administration.sh
+```
+
+Then open `http://localhost/admin`.
+
 ## Product Direction
 
 The current version proves the workflow. Good next steps:

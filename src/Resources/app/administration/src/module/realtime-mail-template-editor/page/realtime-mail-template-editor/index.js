@@ -36,10 +36,15 @@ Component.register('realtime-mail-template-editor', {
             variableSearchTerm: '',
             activeVariableGroup: 'all',
             customFields: [],
+            previewTab: 'html',
+            previewDevice: 'desktop',
             previewEdit: {
                 originalText: '',
                 replacementText: '',
-                sourceText: '',
+                matchedSource: '',
+                matchStart: -1,
+                matchLength: 0,
+                matchType: '',
             },
             editorConfig: {
                 enableBasicAutocompletion: true,
@@ -105,37 +110,85 @@ Component.register('realtime-mail-template-editor', {
         },
 
         variableGroups() {
-            const groups = new Map();
+            const counts = new Map();
 
             this.availableVariables.forEach((variable) => {
-                groups.set(variable.group, this.formatVariableGroupLabel(variable.group));
+                counts.set(variable.group, (counts.get(variable.group) || 0) + 1);
             });
 
             return [
                 {
                     value: 'all',
-                    label: this.$tc('realtime-mail-template-editor.variables.groupAll'),
+                    label: `${this.$tc('realtime-mail-template-editor.variables.groupAll')} (${this.availableVariables.length})`,
                 },
-                ...Array.from(groups.entries())
+                ...Array.from(counts.entries())
                     .sort(([first], [second]) => first.localeCompare(second))
-                    .map(([value, label]) => ({ value, label })),
+                    .map(([value, count]) => ({
+                        value,
+                        label: `${this.formatVariableGroupLabel(value)} (${count})`,
+                    })),
             ];
         },
 
         filteredVariables() {
-            const term = this.variableSearchTerm.trim().toLowerCase();
+            // Every whitespace-separated search word has to match somewhere in the
+            // variable, so "order custom" finds order.customFields.* entries.
+            const terms = this.variableSearchTerm
+                .trim()
+                .toLowerCase()
+                .split(/\s+/)
+                .filter(Boolean);
 
             return this.availableVariables.filter((variable) => {
                 const matchesGroup = this.activeVariableGroup === 'all' || variable.group === this.activeVariableGroup;
-                const matchesTerm = !term
-                    || `${variable.label} ${variable.value} ${variable.example}`.toLowerCase().includes(term);
 
-                return matchesGroup && matchesTerm;
+                if (!matchesGroup) {
+                    return false;
+                }
+
+                if (terms.length === 0) {
+                    return true;
+                }
+
+                const haystack = `${variable.label} ${variable.value} ${variable.example}`.toLowerCase();
+
+                return terms.every((term) => haystack.includes(term));
             });
         },
 
         hasPreviewEditSelection() {
             return this.previewEdit.originalText.trim().length > 0;
+        },
+
+        hasSourceMatch() {
+            return this.previewEdit.matchStart >= 0;
+        },
+
+        previewSampleValues() {
+            // Mirrors the sample data in MailTemplatePreviewController::getPreviewData(),
+            // longest first so bigger values are masked before their substrings.
+            return [
+                'https://example.com/account/recover',
+                'alex.miller@example.com',
+                'demo-order-link-10042',
+                'Ceramic Coffee Cup',
+                'Standard shipping',
+                'Everyday Backpack',
+                'https://example.com',
+                'Miller Studio',
+                'Credit card',
+                'Demo Store',
+                'Dear Alex',
+                '10042',
+                '149.9',
+                '125.97',
+                '89.95',
+                '59.95',
+                '29.98',
+                'Miller',
+                'Alex',
+                'EUR',
+            ];
         },
 
         completerFunction() {
@@ -172,6 +225,7 @@ Component.register('realtime-mail-template-editor', {
         table { max-width: 100%; }
         body * { cursor: text; }
         body *:hover { outline: 1px dashed #189eff; outline-offset: 3px; }
+        [contenteditable="true"] { outline: 2px solid #189eff !important; outline-offset: 3px; }
     </style>
 </head>
 <body>${body}</body>
@@ -180,6 +234,22 @@ Component.register('realtime-mail-template-editor', {
 
         emptyPreviewHtml() {
             return `<div class="realtime-mail-template-editor__empty-preview">${this.$tc('realtime-mail-template-editor.preview.empty')}</div>`;
+        },
+
+        previewPlainText() {
+            return this.preview.contentPlain || '';
+        },
+
+        deviceWidths() {
+            return {
+                desktop: '100%',
+                tablet: '600px',
+                mobile: '375px',
+            };
+        },
+
+        previewFrameWidth() {
+            return this.deviceWidths[this.previewDevice] || '100%';
         },
     },
 
@@ -194,9 +264,27 @@ Component.register('realtime-mail-template-editor', {
                 this.queueRender();
             },
         },
+
+        'previewEdit.replacementText'(value) {
+            // Mirror panel edits into the inline-edited preview element. Typing inside
+            // the iframe produces an identical value, so this only fires a DOM write
+            // when the panel textarea was the source of the change.
+            const target = this.previewEditTarget;
+
+            if (!target || this.getElementText(target) === value.trim()) {
+                return;
+            }
+
+            target.innerText = value;
+        },
     },
 
     created() {
+        // DOM references from the preview iframe; intentionally non-reactive.
+        this.previewEditTarget = null;
+        this.previewEditTextNode = null;
+        this.previewEditOriginalHtml = '';
+
         this.loadTemplates();
     },
 
@@ -308,7 +396,7 @@ Component.register('realtime-mail-template-editor', {
                 label: this.formatVariableLabel(path),
                 value: path,
                 example: source === 'customField' ? this.$tc('realtime-mail-template-editor.variables.customField') : '',
-                group: path.split('.')[0] || 'advanced',
+                group: source === 'customField' ? 'customFields' : (path.split('.')[0] || 'advanced'),
                 source,
             });
         },
@@ -337,7 +425,7 @@ Component.register('realtime-mail-template-editor', {
             const paths = new Set(Object.keys(availableEntities));
             const queue = Object.keys(availableEntities);
             const visited = new Set(queue);
-            const maxVariables = 240;
+            const maxVariables = 800;
 
             while (queue.length > 0 && paths.size < maxVariables) {
                 const prefix = queue.shift();
@@ -412,6 +500,7 @@ Component.register('realtime-mail-template-editor', {
                 customer: this.$tc('realtime-mail-template-editor.variables.groupCustomer'),
                 product: this.$tc('realtime-mail-template-editor.variables.groupProduct'),
                 newsletterRecipient: this.$tc('realtime-mail-template-editor.variables.groupNewsletter'),
+                customFields: this.$tc('realtime-mail-template-editor.variables.groupCustomFields'),
             };
 
             return labelMap[group] || group
@@ -440,121 +529,255 @@ Component.register('realtime-mail-template-editor', {
             const iframe = event.target;
             const iframeDocument = iframe.contentDocument || iframe.contentWindow?.document;
 
-            if (!iframeDocument) {
+            if (!iframeDocument?.body) {
                 return;
             }
+
+            // The iframe reloaded, so any element from the previous document is gone.
+            this.previewEditTarget = null;
+            this.previewEditTextNode = null;
+            this.previewEditOriginalHtml = '';
+            this.clearPreviewEdit();
 
             iframeDocument.body.addEventListener('click', (clickEvent) => {
                 clickEvent.preventDefault();
+                this.startPreviewEdit(clickEvent, iframeDocument);
+            });
 
-                const text = this.getPreviewNodeText(clickEvent.target, iframeDocument);
-
-                if (!text) {
-                    return;
+            iframeDocument.body.addEventListener('input', () => {
+                if (this.previewEditTarget) {
+                    this.previewEdit.replacementText = this.getElementText(this.previewEditTarget);
                 }
-
-                this.previewEdit = {
-                    originalText: text,
-                    replacementText: text,
-                    sourceText: this.findEditableSourceText(text),
-                };
             });
         },
 
-        getPreviewNodeText(node, iframeDocument) {
-            if (!node) {
-                return '';
-            }
-
-            const selection = iframeDocument.getSelection?.();
-            const selectedText = selection?.toString?.().trim();
-            const text = selectedText || node.innerText || node.textContent || '';
-
-            return text
-                .replace(/\s+/g, ' ')
-                .trim()
-                .slice(0, 240);
-        },
-
-        applyPreviewTextEdit() {
-            if (!this.selectedTemplate || !this.hasPreviewEditSelection) {
+        startPreviewEdit(clickEvent, iframeDocument) {
+            if (!this.canEdit || !this.selectedTemplate) {
                 return;
             }
 
-            const originalText = this.previewEdit.originalText.trim();
-            const replacementText = this.previewEdit.replacementText.trim();
-            const currentContent = this.selectedTemplate.contentHtml || '';
-            const sourceText = this.previewEdit.sourceText || originalText;
+            const textNode = this.getTextNodeAtPoint(clickEvent, iframeDocument);
+            const element = textNode?.parentElement || clickEvent.target;
 
-            const nextContent = this.replaceRenderedText(currentContent, sourceText, replacementText);
+            if (!element || element === iframeDocument.body) {
+                return;
+            }
 
-            if (nextContent === currentContent) {
+            // Clicks inside the element being edited just move the caret.
+            if (this.previewEditTarget
+                && (this.previewEditTarget === element || this.previewEditTarget.contains(element))) {
+                return;
+            }
+
+            this.stopInlineEdit(true);
+
+            const text = this.getElementText(element);
+
+            if (!text) {
+                this.clearPreviewEdit();
+                return;
+            }
+
+            const sourceMatch = this.findSourceMatch(element, textNode);
+
+            this.previewEditTarget = element;
+            this.previewEditTextNode = textNode || null;
+            this.previewEditOriginalHtml = element.innerHTML;
+            element.setAttribute('contenteditable', 'true');
+            element.focus();
+
+            this.previewEdit = {
+                originalText: text,
+                replacementText: text,
+                matchedSource: sourceMatch ? sourceMatch.text : '',
+                matchStart: sourceMatch ? sourceMatch.start : -1,
+                matchLength: sourceMatch ? sourceMatch.length : 0,
+                matchType: sourceMatch ? sourceMatch.type : '',
+            };
+        },
+
+        getTextNodeAtPoint(clickEvent, iframeDocument) {
+            if (typeof iframeDocument.caretRangeFromPoint === 'function') {
+                const range = iframeDocument.caretRangeFromPoint(clickEvent.clientX, clickEvent.clientY);
+
+                if (range?.startContainer?.nodeType === 3) {
+                    return range.startContainer;
+                }
+            }
+
+            if (typeof iframeDocument.caretPositionFromPoint === 'function') {
+                const position = iframeDocument.caretPositionFromPoint(clickEvent.clientX, clickEvent.clientY);
+
+                if (position?.offsetNode?.nodeType === 3) {
+                    return position.offsetNode;
+                }
+            }
+
+            return null;
+        },
+
+        getElementText(element) {
+            return (element.innerText || element.textContent || '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, 500);
+        },
+
+        findSourceMatch(element, textNode) {
+            const content = this.selectedTemplate?.contentHtml || '';
+
+            if (!content) {
+                return null;
+            }
+
+            // Tier 1: the exact text node or markup appears verbatim in the template.
+            // The type decides what the replacement is built from on apply: plain text
+            // for a text-node match, innerHTML for anything that may contain markup.
+            const exactCandidates = [];
+            const rawNodeText = textNode?.data || '';
+
+            if (rawNodeText.trim()) {
+                exactCandidates.push({ text: rawNodeText, type: 'node' });
+                exactCandidates.push({ text: rawNodeText.trim(), type: 'node' });
+            }
+
+            const innerHtml = (element.innerHTML || '').trim();
+
+            if (innerHtml) {
+                exactCandidates.push({ text: innerHtml, type: 'html' });
+            }
+
+            for (const candidate of exactCandidates) {
+                const index = content.indexOf(candidate.text);
+
+                if (index >= 0) {
+                    return {
+                        start: index,
+                        length: candidate.text.length,
+                        text: candidate.text,
+                        type: candidate.type,
+                    };
+                }
+            }
+
+            // Tier 2: tolerant match — allow whitespace, entities, inline tags and Twig
+            // expressions between the static words of the rendered text.
+            const visibleText = this.getElementText(element);
+            const pattern = this.createTolerantPattern(visibleText);
+
+            if (!pattern) {
+                return null;
+            }
+
+            const match = content.match(new RegExp(pattern));
+
+            if (match && match.index !== undefined) {
+                return {
+                    start: match.index,
+                    length: match[0].length,
+                    text: match[0],
+                    type: 'html',
+                };
+            }
+
+            return null;
+        },
+
+        createTolerantPattern(visibleText) {
+            if (!visibleText) {
+                return null;
+            }
+
+            // Mask rendered variable output (the controller's sample data) so only the
+            // static text has to match the template source.
+            let masked = visibleText;
+
+            this.previewSampleValues.forEach((value) => {
+                masked = masked.split(value).join('\u0000');
+            });
+
+            const staticParts = masked
+                .split('\u0000')
+                .map((part) => part.trim())
+                .filter((part) => part.length > 0);
+
+            // Without a reasonable static anchor the pattern would match almost anything.
+            if (staticParts.join('').replace(/\s/g, '').length < 3) {
+                return null;
+            }
+
+            const wordGap = '(?:\\s|&nbsp;|<[^>]*>)+';
+            const variableGap = '(?:\\{\\{[\\s\\S]*?\\}\\}|\\{%[\\s\\S]*?%\\}|\\s|&nbsp;|<[^>]*>)+';
+
+            return staticParts
+                .map((part) => part
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .map((word) => this.escapeRegExp(word))
+                    .join(wordGap))
+                .join(variableGap);
+        },
+
+        applyPreviewTextEdit() {
+            if (!this.selectedTemplate || !this.canEdit || !this.hasSourceMatch) {
+                return;
+            }
+
+            const content = this.selectedTemplate.contentHtml || '';
+            const { matchedSource, matchLength } = this.previewEdit;
+            let { matchStart } = this.previewEdit;
+
+            // The template may have changed in the code editor since the click;
+            // re-validate the stored range and fall back to searching again.
+            if (content.substr(matchStart, matchLength) !== matchedSource) {
+                matchStart = content.indexOf(matchedSource);
+            }
+
+            if (matchStart < 0) {
                 this.createNotificationError({
                     message: this.$tc('realtime-mail-template-editor.preview.editNotFound'),
                 });
                 return;
             }
 
-            this.selectedTemplate.contentHtml = nextContent;
+            // Build the replacement from what was matched: a text-node match is replaced
+            // with the node's edited text, everything else with the element's edited
+            // innerHTML so markup like <br> and inline tags survives the edit.
+            let replacementText = this.previewEdit.replacementText.trim();
+
+            if (this.previewEdit.matchType === 'node' && this.previewEditTextNode?.parentNode) {
+                replacementText = this.previewEditTextNode.data;
+            } else if (this.previewEdit.matchType === 'html' && this.previewEditTarget) {
+                replacementText = this.previewEditTarget.innerHTML;
+            }
+
+            this.selectedTemplate.contentHtml = content.slice(0, matchStart)
+                + replacementText
+                + content.slice(matchStart + matchLength);
+
+            this.stopInlineEdit(false);
             this.clearPreviewEdit();
         },
 
-        findEditableSourceText(renderedText) {
-            const content = this.selectedTemplate?.contentHtml || '';
-
-            if (content.includes(renderedText)) {
-                return renderedText;
-            }
-
-            const renderedWords = this.normalizeText(renderedText).split(' ').filter((word) => word.length > 2);
-            const sourceTextCandidates = content
-                .replace(/<br\s*\/?>/gi, '\n')
-                .replace(/<\/(p|div|td|tr|li|h[1-6])>/gi, '\n')
-                .replace(/<[^>]+>/g, ' ')
-                .split(/\n+/)
-                .map((line) => line.replace(/\s+/g, ' ').trim())
-                .filter((line) => line.length > 0);
-
-            return sourceTextCandidates.find((candidate) => {
-                const normalizedCandidate = this.normalizeText(candidate.replace(/{{.*?}}/g, ' '));
-
-                return renderedWords.some((word) => normalizedCandidate.includes(word));
-            }) || renderedText;
+        cancelPreviewEdit() {
+            this.stopInlineEdit(true);
+            this.clearPreviewEdit();
         },
 
-        replaceRenderedText(content, sourceText, replacementText) {
-            if (content.includes(sourceText)) {
-                return content.replace(sourceText, replacementText);
+        stopInlineEdit(restoreOriginal) {
+            const target = this.previewEditTarget;
+
+            if (target) {
+                target.removeAttribute('contenteditable');
+
+                if (restoreOriginal && this.previewEditOriginalHtml) {
+                    target.innerHTML = this.previewEditOriginalHtml;
+                }
             }
 
-            const sourcePattern = this.createTwigAwarePattern(sourceText);
-            const regex = new RegExp(sourcePattern);
-
-            if (regex.test(content)) {
-                return content.replace(regex, replacementText);
-            }
-
-            return content;
-        },
-
-        createTwigAwarePattern(sourceText) {
-            return sourceText
-                .split(/({{[\s\S]*?}}|{%[\s\S]*?%})/g)
-                .map((part) => {
-                    if (part.startsWith('{{') || part.startsWith('{%')) {
-                        return '[\\s\\S]*?';
-                    }
-
-                    return this.escapeRegExp(part).replace(/\s+/g, '\\s+');
-                })
-                .join('');
-        },
-
-        normalizeText(text) {
-            return text
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, ' ')
-                .trim();
+            this.previewEditTarget = null;
+            this.previewEditTextNode = null;
+            this.previewEditOriginalHtml = '';
         },
 
         escapeRegExp(text) {
@@ -565,7 +788,10 @@ Component.register('realtime-mail-template-editor', {
             this.previewEdit = {
                 originalText: '',
                 replacementText: '',
-                sourceText: '',
+                matchedSource: '',
+                matchStart: -1,
+                matchLength: 0,
+                matchType: '',
             };
         },
 
@@ -627,9 +853,5 @@ Component.register('realtime-mail-template-editor', {
             }
         },
 
-        onChangeLanguage(languageId) {
-            Shopware.State.commit('context/setApiLanguageId', languageId);
-            this.loadSelectedTemplate();
-        },
     },
 });

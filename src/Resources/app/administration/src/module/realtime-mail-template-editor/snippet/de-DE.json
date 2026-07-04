@@ -29,15 +29,24 @@
             "groupSalesChannel": "Verkaufskanal",
             "groupProduct": "Produkt",
             "groupNewsletter": "Newsletter",
+            "groupCustomFields": "Zusatzfelder",
             "customField": "Benutzerdefiniertes Feld"
         },
         "preview": {
             "empty": "Waehle ein Template aus, um mit der Bearbeitung zu beginnen.",
-            "clickToEditHint": "Klicke Text in der Vorschau an, um passenden Template-Text zu bearbeiten.",
+            "emptyPlain": "Noch kein Klartext-Inhalt fuer dieses Template vorhanden.",
+            "clickToEditHint": "Klicke beliebigen Text in der Vorschau an, um ihn direkt zu bearbeiten.",
             "quickEditTitle": "Ausgewaehlten Vorschau-Text bearbeiten",
             "quickEditLabel": "Ersatztext",
             "applyTextEdit": "In HTML uebernehmen",
-            "editNotFound": "Der ausgewaehlte Text wurde aus Variablen oder Markup gerendert und nicht als Klartext im HTML-Template gefunden."
+            "matchedSourceLabel": "Passende Template-Quelle",
+            "noSourceMatch": "Dieser Text wird vollstaendig aus Variablen generiert und kann nicht der Template-Quelle zugeordnet werden. Bearbeite ihn stattdessen im HTML-Editor.",
+            "editNotFound": "Das Template wurde seit der Auswahl geaendert. Klicke den Text in der Vorschau erneut an.",
+            "tabHtml": "HTML",
+            "tabPlain": "Klartext",
+            "deviceDesktop": "Desktop",
+            "deviceTablet": "Tablet",
+            "deviceMobile": "Mobil"
         },
         "notification": {
             "saveSuccess": "E-Mail-Template gespeichert."

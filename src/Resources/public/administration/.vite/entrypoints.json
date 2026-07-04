@@ -1,0 +1,25 @@
+{
+  "base": "/bundles/realtimemailtemplateeditor/administration/",
+  "entryPoints": {
+    "realtime-mail-template-editor": {
+      "css": [
+        "/bundles/realtimemailtemplateeditor/administration/assets/realtime-mail-template-editor-BeOmQdAQ.css"
+      ],
+      "dynamic": [],
+      "js": [
+        "/bundles/realtimemailtemplateeditor/administration/assets/realtime-mail-template-editor-Cw34NrNx.js"
+      ],
+      "legacy": false,
+      "preload": []
+    }
+  },
+  "legacy": false,
+  "metadatas": {},
+  "version": [
+    "7.1.0",
+    7,
+    1,
+    0
+  ],
+  "viteServer": null
+}

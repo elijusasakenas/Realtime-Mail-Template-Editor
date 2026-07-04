@@ -29,15 +29,24 @@
             "groupSalesChannel": "Sales channel",
             "groupProduct": "Product",
             "groupNewsletter": "Newsletter",
+            "groupCustomFields": "Custom fields",
             "customField": "Custom field"
         },
         "preview": {
             "empty": "Choose a template to start editing.",
-            "clickToEditHint": "Click text in the preview to edit matching template text.",
+            "emptyPlain": "No plain text content for this template yet.",
+            "clickToEditHint": "Click any text in the preview to edit it directly.",
             "quickEditTitle": "Edit selected preview text",
             "quickEditLabel": "Replacement text",
             "applyTextEdit": "Apply to HTML",
-            "editNotFound": "The selected text was rendered from variables or markup and was not found as plain text in the HTML template."
+            "matchedSourceLabel": "Matching template source",
+            "noSourceMatch": "This text is generated entirely by variables and cannot be mapped back to the template source. Edit it in the HTML editor instead.",
+            "editNotFound": "The template changed since you selected this text. Click the text in the preview again.",
+            "tabHtml": "HTML",
+            "tabPlain": "Plain text",
+            "deviceDesktop": "Desktop",
+            "deviceTablet": "Tablet",
+            "deviceMobile": "Mobile"
         },
         "notification": {
             "saveSuccess": "Email template saved."

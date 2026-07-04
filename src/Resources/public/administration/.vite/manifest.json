@@ -1,0 +1,11 @@
+{
+  "main.js": {
+    "file": "assets/realtime-mail-template-editor-Cw34NrNx.js",
+    "name": "realtime-mail-template-editor",
+    "src": "main.js",
+    "isEntry": true,
+    "css": [
+      "assets/realtime-mail-template-editor-BeOmQdAQ.css"
+    ]
+  }
+}
